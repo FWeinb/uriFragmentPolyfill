@@ -61,8 +61,9 @@
               unit = isPercent ? "%" : "";
           result = "-moz-image-rect(url("+src+"),"+y+unit+","+right+unit+","+bottom+unit+","+x+unit+")";
         }
+        return [result, x, y, w, h, isPercent];
       }
-      return [result, x, y, w, h, isPercent];
+      return null;
     };
 
 
