@@ -44,7 +44,7 @@
           result = "", src, isPercent, x, y, w, h;
       if (frag !== null){
             src = frag[1];
-            isPercent = (frag[2] !== undefined && frag[1].toLowerCase() === "percent");
+            isPercent = (frag[2] !== undefined && frag[2].toLowerCase() === "percent");
             x = parseInt(frag[3],10);
             y = parseInt(frag[4],10);
             w = parseInt(frag[5],10);
@@ -104,8 +104,13 @@
       var uri = this.src;
       var parsedURI = parseURI(uri);
       if (parsedURI !== null){
-        var unit = parsedURI[5] ? "%" : "px";
-        this.setAttribute("style", "display:block;background-image:"+parsedURI[0]+";width:"+parsedURI[3]+unit+";height:"+parsedURI[4]+unit+";");
+        var w = parsedURI[3],
+            h = parsedURI[4];
+        if (parsedURI[5] === true){
+          w = this.width * (w*0.01);
+          h = this.height * (h*0.01);
+        }
+        this.setAttribute("style", "display:block;background-image:"+parsedURI[0]+";width:"+w+"px;height:"+h+"px;");
         this.src = "";
       }
     });
