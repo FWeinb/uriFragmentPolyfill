@@ -1,26 +1,37 @@
 /*
  Media Fragment URI - Spatial Dimentions polyfill
- http://www.w3.org/TR/media-frags/#naming-space
- 2012 by Fabrice Weinberg (http://fabrice.weinberg.me)
+ Spec: http://www.w3.org/TR/media-frags/#naming-space
+ 2013 by Fabrice Weinberg (http://fabrice.weinberg.me)
 */
 
 (function($) {
   /*global  jQuery:true, browser:true */
 
   $.fn.uriFragment = function() {
-    var cssPattern = /\s*(.*?)\s*\{(.*?)\}/g;
-    var bgPattern = /(background(?:-image)*):(.*?);/;
+    var clearCssPattern = /\s*(?!<\")\/\*[^\*]+\*\/(?!\")\s*| |\n|\r/gm,
+        cssPattern = /\s*(.*?)\s*\{(.*?)\}/g,
+        bgPattern = /(background(?:-image)*):(.*?);/,
 
-    var uriPattern = /url\((.*?#.*?)\)/g;
-    var spPattern = /(.*?)#xywh=(pixel|percent)*:*(\d+),(\d+),(\d+),(\d+)/;
+        uriPattern = /url\((.*?#.*?)\)/g,
+        spPattern = /(.*?)#xywh=(pixel|percent)*:*(\d+),(\d+),(\d+),(\d+)/,
 
-    var supportBackgroundCanvas = (document.getCSSCanvasContext !== undefined);
-    var supportMozImageRect     = !supportBackgroundCanvas;
-                                 // don't have a test for that....
-    var globaleImageCount = 0;
+                                  // Test for CSSCanvasContext => https://www.webkit.org/blog/176/css-canvas-drawing/
+        supportBackgroundCanvas = !!document.getCSSCanvasContext,
 
-    var cssCanvas = function(src, name, x, y, w, h, isPercent){
-      var img = new Image();
+                                  //Test for -moz-image-rect support => https://developer.mozilla.org/en-US/docs/CSS/-moz-image-rect
+        supportMozImageRect     = (function(){
+                                      var style = "-moz-image-rect(url(\"\"), 0, 0, 0, 0)",
+                                          div   = document.createElement('div');
+                                          div.style.backgroundImage = style;
+                                      return div.style.backgroundImage === style;
+                                  })(),
+       globaleImageCount = 0;
+
+    var cssCanvas = function(src, x, y, w, h, isPercent){
+      globaleImageCount++;
+      var name = "poly_img_"+globaleImageCount,
+           img = new Image();
+
       img.onload = function(){
         if (isPercent){
            var imageWidth = img.width, imageHeight = img.height;
@@ -36,6 +47,7 @@
             ctx.drawImage(img, x,y,w,h,0,0,w,h);
       };
       img.src = src;
+      return "-webkit-canvas("+name+")";
     };
 
 
@@ -51,14 +63,11 @@
             h = parseInt(frag[6],10);
 
         if (supportBackgroundCanvas){
-          var name = "poly_img_"+globaleImageCount;
-          cssCanvas(src, name, x, y, w, h, isPercent);
-          result = "-webkit-canvas("+name+")";
-          globaleImageCount++;
+          result = cssCanvas(src, x, y, w, h, isPercent);
         }else if(supportMozImageRect){
           var bottom = y + h,
-              right = x + w,
-              unit = isPercent ? "%" : "";
+              right  = x + w,
+              unit   = isPercent ? "%" : "";
           result = "-moz-image-rect(url("+src+"),"+y+unit+","+right+unit+","+bottom+unit+","+x+unit+")";
         }
         return [result, x, y, w, h, isPercent];
@@ -69,7 +78,7 @@
 
     var parse = function(css){
        var updatedCSS = "", matches, uri;
-       css = css.replace(/\s*(?!<\")\/\*[^\*]+\*\/(?!\")\s*/gm, '').replace(/ |\n|\r/g, '');
+       css = css.replace(clearCssPattern, '');
 
 
        while ((matches = cssPattern.exec(css)) !== null){
@@ -94,26 +103,32 @@
         document.head.appendChild(style);
     };
 
-    // Update CSS
-    $('style').each(function() {
-        if ($(this).is('link')) $.get(this.href).success(function(css) { parse(css); }); else parse($(this).text());
-    });
+    var runPolyfill = function(){
+        // Update CSS
+      $('style').each(function() {
+          if ($(this).is('link')) $.get(this.href).success(function(css) { parse(css); }); else parse($(this).text());
+      });
 
-    // Update IMG-Tag
-    $('img').each(function(){
-      var uri = this.src;
-      var parsedURI = parseURI(uri);
-      if (parsedURI !== null){
-        var w = parsedURI[3],
-            h = parsedURI[4];
-        if (parsedURI[5] === true){
-          w = this.width * (w*0.01);
-          h = this.height * (h*0.01);
+      // Update IMG-Tag
+      $('img').each(function(){
+        var uri = this.src;
+        var parsedURI = parseURI(uri);
+        if (parsedURI !== null){
+          var w = parsedURI[3],
+              h = parsedURI[4];
+          if (parsedURI[5] === true){
+              w = this.width * (w*0.01);
+              h = this.height * (h*0.01);
+          }
+          this.setAttribute("style", "display:block;background-image:"+parsedURI[0]+";width:"+w+"px;height:"+h+"px;");
+          this.src = "";
         }
-        this.setAttribute("style", "display:block;background-image:"+parsedURI[0]+";width:"+w+"px;height:"+h+"px;");
-        this.src = "";
-      }
-    });
+      });
+    };
+
+    if (supportBackgroundCanvas || supportMozImageRect){
+      runPolyfill();
+    }
   };
 })(jQuery);
 
