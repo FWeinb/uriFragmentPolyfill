@@ -1,6 +1,6 @@
 {
-  "name": "Media Fragment URI (spatial dimention) Polyfill",
-  "description": "Use the spatial dimention URI Fragment in WebKit and Firefox",
+  "name": "Media Fragment URI (spatial dimension) Polyfill",
+  "description": "Use the spatial dimension URI Fragment in WebKit and Firefox",
   "version": "0.2",
   "author": "Fabrice Weinberg (http://fabrice.weinberg.me/)"
 }
